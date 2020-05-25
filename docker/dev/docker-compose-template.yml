@@ -1,0 +1,64 @@
+version: "3"
+services:
+
+    mobc.nginx:
+        build:
+            context: ./nginx/
+        image: mobc.nginx:dev
+        container_name: mobc.nginx
+        hostname: mobc.nginx
+        env_file:
+            - .env
+        environment:
+            COLUMNS: "`tput cols`"
+            LINES: "`tput lines`"
+            UID_VAR: {{ UID_VALUE }}
+            GID_VAR: {{ GID_VALUE }}
+        ports:
+            - "${HOST_NGINX_PORT}:80"
+        links:
+            - mobc.php
+        volumes:
+            - "../../app/public:/var/www/mobc/public"
+
+    mobc.php:
+        build:
+            context: ./php/
+        image: mobc.php:dev
+        container_name: mobc.php
+        hostname: mobc.php
+        env_file:
+            - .env
+        environment:
+            COLUMNS: "`tput cols`"
+            LINES: "`tput lines`"
+            UID_VAR: {{ UID_VALUE }}
+            GID_VAR: {{ GID_VALUE }}
+            XDEBUG_CONFIG: remote_host=10.254.254.254
+            PHP_IDE_CONFIG: serverName=mobc.local
+        expose:
+            - "9000"
+        volumes:
+            - "../../app:/var/www/mobc"
+        links:
+            - mobc.db
+
+    mobc.db:
+        build:
+            context: ./db/
+        image: mobc.db:dev
+        container_name: mobc.db
+        hostname: mobc.db
+        env_file:
+            - .env
+        environment:
+            COLUMNS: "`tput cols`"
+            LINES: "`tput lines`"
+            PGDATA: /pgdata
+            POSTGRES_DB: ${DATABASE_NAME}
+            POSTGRES_USER: ${DATABASE_USER}
+            POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+        ports:
+            - "${HOST_DATABASE_PORT}:${DATABASE_PORT}"
+        volumes:
+            - "./var/db_data:/pgdata"
