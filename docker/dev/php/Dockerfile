@@ -17,6 +17,9 @@ RUN apt-get update \
 
 RUN sed -i "s/opcache.validate_timestamps=0 ; (comment this in dev env)/;opcache.validate_timestamps=0 ; (comment this in dev env)/g" /usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
 
+RUN pecl install ds \
+    && docker-php-ext-enable ds
+
 RUN pecl install xdebug \
     && docker-php-ext-enable xdebug \
     && echo "xdebug.remote_enable=1" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
