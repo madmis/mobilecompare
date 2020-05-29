@@ -2,9 +2,20 @@
 
 namespace App\Grabber\Command;
 
+use App\Grabber\Service\WebGuy\Proxy\FatezeroProxyProvider;
+use App\Grabber\Service\WebGuy\Proxy\ProxyChecker;
+use App\Grabber\Service\WebGuy\Proxy\ProxyDtoInterface;
+use App\Grabber\Service\WebGuy\Spider;
+use App\Grabber\Service\WebGuy\WebGuy;
+use App\Grabber\Service\WebGuy\WebScrapper;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
+use JsonException;
+use Psr\Cache\CacheItemInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Cache\CacheItem;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
@@ -23,6 +34,20 @@ class DeviceSpecificationGrabberCommand extends Command
      * @inheritDoc
      */
     protected static $defaultName = 'app:grab:ds';
+
+    /**
+     * @var LoggerInterface
+     */
+    private LoggerInterface $logger;
+
+    /**
+     * @param LoggerInterface $logger
+     */
+    public function __construct(LoggerInterface $logger)
+    {
+        parent::__construct();
+        $this->logger = $logger;
+    }
 
     /**
      * @inheritDoc
@@ -45,54 +70,36 @@ EOT
      */
     protected function execute(InputInterface $input, OutputInterface $output) : int
     {
-        $httpClient = HttpClient::create();
+        $cache = new FilesystemAdapter();
+        /** @var CacheItemInterface $proxiesList */
+        $proxiesList = $cache->getItem('proxy.list');
 
-        $output->writeln('');
-        $proxy = $this->getProxy();
-        dump($proxy);
+        if (!$proxiesList->isHit()) {
+            $proxies = (new FatezeroProxyProvider())->getProxies();
+            $validProxies = (new ProxyChecker())->multiCheck($proxies);
+            $proxiesList->set($validProxies)->expiresAfter(900);
+            $cache->save($proxiesList);
+        }
 
-        $done = false;
-
-        //TODO: Создать WebGuy
-        // WebGuy должен получать клиента как параметр, сам он не создает его.
-        // И он оперирует всеми запросами только через этот client, не создавая нового.
-        // PS: чисто для себя: можно сделать этот сервис отдельной библиотекой (open source и возможно еще продавать помощь)
-        do {
-            try {
-                $response = $httpClient->request('GET', 'https://www.devicespecifications.com/en/brand-more', [
-                    'http_version' => '1.1',
-                    'proxy' => "{$proxy['host']}:{$proxy['port']}",
-                    'max_duration' => 15,
-                    'timeout' => 20,
-                    'verify_peer' => 1,
-                    'verify_host' => 0,
-                    'headers' => [
-                        'Accept-Encoding' => 'gzip, deflate, br',
-                        'User-Agent' => $this->getUserAgent(),
-                    ],
-                ]);
-
-                dump($response->getInfo('debug'));
-                dump($response->getContent());
-                dump($response->getHeaders());
-
-                $crawler = new Crawler($response->getContent());
-                $crawler->filter('.brand-listing-container-news a')->each(
-                    function(Crawler $node) use ($output) {
-                        dump($node->attr('href'));
-                        dump($node->text());
-                    }
-                );
-                $done = true;
-            } catch (TransportException $e) {
-                $output->writeln($e->getMessage());
-            }
-        } while ($done);
+        $webGuy = new WebGuy([
+            'http_version' => '1.1',
+            //@formatter:off
+            'proxy' => array_map(fn(ProxyDtoInterface $proxy) => "{$proxy->host()}:{$proxy->port()}", $proxiesList->get()),
+            //@formatter:on
+            'max_duration' => 15,
+            'timeout' => 20,
+            'verify_peer' => 1,
+            'verify_host' => 0,
+            'headers' => [
+                'Accept-Encoding' => 'gzip, deflate, br',
+                'User-Agent' => $this->getUserAgent(),
+            ],
+        ], $this->logger);
+        $scrapper = new WebScrapper($webGuy, [], $this->logger);
+        $scrapper->run(new Spider());
 
         return 0;
     }
-
-    private array $proxies = [];
 
     /**
      * @return string
@@ -106,20 +113,4 @@ EOT
 
         return $agents[array_rand($agents)];
     }
-
-    /**
-     * @return array
-     * @noinspection PhpDocMissingThrowsInspection
-     */
-    private function getProxy() : array
-    {
-        if (!$this->proxies) {
-            $proxiesRaw = file_get_contents('https://raw.githubusercontent.com/fate0/proxylist/master/proxy.list#');
-            $this->proxies = explode("\n", $proxiesRaw);
-        }
-
-        return json_decode($this->proxies[array_rand($this->proxies)], true, 512, JSON_THROW_ON_ERROR);
-    }
-
-
 }

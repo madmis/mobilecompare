@@ -2,9 +2,9 @@
 
 namespace App\Grabber\Service\WebGuy;
 
+use App\Grabber\Service\WebGuy\Task\DeviceSpecifications\InitialTask;
 use Ds\PriorityQueue;
 use Generator;
-use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\DomCrawler\Crawler;
 
 /**
@@ -13,12 +13,16 @@ use Symfony\Component\DomCrawler\Crawler;
  */
 class Spider implements SpiderInterface
 {
-    private string $startUrl;
-
     /**
      * @var PriorityQueue
      */
     private PriorityQueue $queue;
+
+    public function __construct()
+    {
+        $this->queue = new PriorityQueue();
+        $this->queue->push(new InitialTask(), 1);
+    }
 
     /**
      * @inheritDoc
@@ -29,24 +33,26 @@ class Spider implements SpiderInterface
     }
 
     /**
-     * @return Generator|TaskInterface[]
+     * @param SpiderTaskInterface $task
+     * @param WebGuyInterface $webGuy
+     *
+     * @return void
      */
-//    public function start() : Generator
-//    {
-////        $task = $this->createTask($url, $method);
-//    }
+    public function brandMorePage(
+        SpiderTaskInterface $task,
+        WebGuyInterface $webGuy
+    ) : void {
+        $webGuy->crawler()->filterXPath('//div[@class="brand-listing-container-news"]/a')
+            ->each(static function(Crawler $node) {
+                // По идее нужны таблицы: data_provider - туда сохраняем информацию о сайтах с данными.
+                // src_brand - названия брендов, возможные алиасы (json), теги (json)
+                // device type - наверное пока можно хранить в коде
+                // src_device - type, brand_id, model, aliases (json), tags  (json), release date, - https://www.doctrine-project.org/projects/doctrine-orm/en/2.7/reference/inheritance-mapping.html#class-table-inheritance
+                // src_mobile_phone - наследуется от верхней. Хранит всю тех информацию о модели (тут подумать может еще дробить на разные таблицы)
 
-//    public function parse(TaskInterface $task, Crawler $crawler, ResponseInterface $response) :
-//    {
-//        yield $task->parse()
-//    }
-//
-//    private function createTask(string $url, string $method)
-
-// спайдер запускает таски из очереди
-// и шарит в каждую таску очередь (доступ к очереди)
-// каждая таска может создавать новые такси и добавлять их в очередь.
-// спайдер будет выполнять таски пока они есть в очереди
-// в метод finalize (или как-то придумать метод после выполнения)
-// передается response и crawler и в этом методе обрабатывается результат таски
+                // TODO: сохраняем бренд.
+                dump($node->attr('href'));
+                dump($node->text());
+            });
+    }
 }

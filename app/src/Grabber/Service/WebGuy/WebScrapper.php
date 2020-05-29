@@ -59,8 +59,9 @@ class WebScrapper implements WebScrapperInterface
     {
         /** @var SpiderTaskInterface $task */
         foreach ($spider->tasks() as $task) {
+            $webGuy = $task->webGuy() ?? $this->webGuy;
             try {
-                $this->webGuy->go($task->httpMethod(), $task->url(), $task->requestData());
+                $webGuy->go($task->httpMethod(), $task->url(), $task->requestData());
             } catch (Throwable $e) {
                 if ($this->options['skip_failed_requests']) {
                     $this->logger->info("Request was skipped because of: {$e->getMessage()}");
@@ -79,8 +80,7 @@ class WebScrapper implements WebScrapperInterface
 
             $spider->{$task->handlerMethod()}(
                 $task,
-                $this->webGuy->crawler(),
-                $this->webGuy->response()
+                $webGuy
             );
         }
     }

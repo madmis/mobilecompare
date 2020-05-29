@@ -17,11 +17,13 @@ interface WebGuyInterface
      * @param string $url
      * @param array $requestData
      *
+     * @return bool
+     *
      * @throws ConnectException
      * @throws BadResponseException
      * @throws TooManyRedirectsException
      */
-    public function go(string $method, string $url, array $requestData = []) : void;
+    public function go(string $method, string $url, array $requestData = []) : bool;
 
     /**
      * @return ResponseInterface

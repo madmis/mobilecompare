@@ -27,4 +27,9 @@ interface SpiderTaskInterface
      * @return string
      */
     public function handlerMethod() : string;
+
+    /**
+     * @return WebGuyInterface|null
+     */
+    public function webGuy() : ?WebGuyInterface;
 }
