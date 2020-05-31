@@ -1,0 +1,4 @@
+services:
+    App\Grabber\:
+        resource: '../../../Grabber/*'
+        exclude: '../../../Grabber/{Entity,Migrations}'

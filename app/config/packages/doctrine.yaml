@@ -16,10 +16,22 @@ doctrine:
         auto_generate_proxy_classes: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         auto_mapping: true
-        mappings: ~
-#            App:
-#                is_bundle: false
-#                type: annotation
-#                dir: '%kernel.project_dir%/src/Entity'
-#                prefix: 'App\Entity'
-#                alias: App
+        mappings:
+            gedmo_loggable:
+                type: annotation
+                prefix: Gedmo\Loggable\Entity
+                dir: '%kernel.project_dir%/vendor/gedmo/doctrine-extensions/lib/Gedmo/Loggable/Entity'
+                alias: GedmoLoggable # (optional) it will default to the name set for the mapping
+                is_bundle: false
+            Common:
+                is_bundle: false
+                type: annotation
+                dir: '%kernel.project_dir%/src/Common/Entity'
+                prefix: 'App\Common\Entity'
+                alias: Common
+            Grabber:
+                is_bundle: false
+                type: annotation
+                dir: '%kernel.project_dir%/src/Grabber/Entity'
+                prefix: 'App\Grabber\Entity'
+                alias: Grabber

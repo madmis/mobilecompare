@@ -2,8 +2,7 @@
 
 namespace App\Grabber\Service\WebGuy\Task\DeviceSpecifications;
 
-use App\Grabber\Service\WebGuy\SpiderTaskInterface;
-use App\Grabber\Service\WebGuy\WebGuyInterface;
+use App\Grabber\Service\WebGuy\{SpiderTaskInterface, WebGuyInterface};
 
 /**
  * Class InitialTask
@@ -49,5 +48,13 @@ class InitialTask implements SpiderTaskInterface
     public function webGuy() : ?WebGuyInterface
     {
         return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function delay() : int
+    {
+        return 0;
     }
 }

@@ -13,7 +13,7 @@ class ProxyChecker implements ProxyCheckerInterface
      */
     public function check(ProxyDtoInterface $proxy) : bool
     {
-        return (bool) @fsockopen($proxy->host(), $proxy->port(), $errno, $errstr, 1);
+        return (bool) @fsockopen($proxy->host(), $proxy->port(), $errno, $errstr, 0.1);
     }
 
     /**

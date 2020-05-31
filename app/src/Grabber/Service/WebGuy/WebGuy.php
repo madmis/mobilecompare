@@ -2,7 +2,8 @@
 
 namespace App\Grabber\Service\WebGuy;
 
-use GuzzleHttp\{Client,
+use GuzzleHttp\{
+    Client,
     ClientInterface,
     Cookie\CookieJar,
     Exception\BadResponseException,
@@ -10,13 +11,15 @@ use GuzzleHttp\{Client,
     Exception\RequestException,
     Exception\TooManyRedirectsException,
     Psr7\Response,
-    RequestOptions
+    RequestOptions,
 };
+use Psr\Cache\CacheItemInterface;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
+use Psr\Log\{LoggerInterface, NullLogger};
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\String\UnicodeString;
 
 /**
  * Class WebGuy
@@ -89,6 +92,23 @@ class WebGuy implements WebGuyInterface
             ? $options[RequestOptions::FORM_PARAMS] = $requestData
             : $options[RequestOptions::QUERY] = $requestData;
 
+        $cache = new FilesystemAdapter();
+        /** @var CacheItemInterface $cached */
+        $cacheKey = (new UnicodeString($url))->snake()->toString();
+        $cached = $cache->getItem("web_guy.url.{$cacheKey}");
+
+        if ($cached->isHit() && $html = $cached->get()) {
+            $this->logger->info("Get cached url version: {$cacheKey} {$url}");
+            $this->response = new Response(
+                200,
+                [],
+                $html
+            );
+            $this->crawler = new Crawler($html);
+
+            return true;
+        }
+
         try {
             $this->logger->info("Run request: {$method} {$url}", [
                 'data' => $requestData,
@@ -102,6 +122,7 @@ class WebGuy implements WebGuyInterface
 
             if (count($this->proxy) > 0) {
                 $this->logger->warning("Proxy error: {$e->getMessage()}. This proxy removed, try new one");
+
                 return $this->go($method, $url);
             }
 
@@ -150,6 +171,10 @@ class WebGuy implements WebGuyInterface
         }
 
         $this->logger->info("Request successful");
+        $cached
+            ->set((clone $this->response)->getBody()->getContents())
+            ->expiresAfter(60*60*24);
+        $cache->save($cached);
         $this->response = $response;
         $this->crawler = new Crawler((clone $this->response)->getBody()->getContents());
 

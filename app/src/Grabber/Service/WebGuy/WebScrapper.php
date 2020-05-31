@@ -61,6 +61,7 @@ class WebScrapper implements WebScrapperInterface
         foreach ($spider->tasks() as $task) {
             $webGuy = $task->webGuy() ?? $this->webGuy;
             try {
+                usleep($task->delay());
                 $webGuy->go($task->httpMethod(), $task->url(), $task->requestData());
             } catch (Throwable $e) {
                 if ($this->options['skip_failed_requests']) {

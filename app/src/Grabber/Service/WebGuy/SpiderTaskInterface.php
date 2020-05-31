@@ -32,4 +32,12 @@ interface SpiderTaskInterface
      * @return WebGuyInterface|null
      */
     public function webGuy() : ?WebGuyInterface;
+
+    /**
+     * Delay in microseconds
+     * @see usleep
+     *
+     * @return int
+     */
+    public function delay() : int;
 }

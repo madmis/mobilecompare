@@ -1,0 +1,4 @@
+services:
+    App\Common\:
+        resource: '../../../Common/*'
+        exclude: '../../../Common/{Entity,Migrations}'
